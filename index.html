@@ -1,0 +1,158 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bike RNG 2.0</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#0b1020;color:white;font-family:system-ui,Arial,sans-serif;padding:20px}
+main{max-width:850px;margin:auto}
+header{text-align:center;padding:24px}
+h1{font-size:clamp(32px,8vw,52px);margin:0;color:#facc15}
+.panel{background:#171f33;border:1px solid #303c56;border-radius:18px;padding:20px;margin-bottom:18px}
+.stats{display:flex;justify-content:space-around;text-align:center;gap:10px}
+.stats strong{display:block;font-size:28px;color:#facc15}
+#result{text-align:center;min-height:180px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
+#bikeEmoji{font-size:65px}
+#bikeName{font-size:26px;font-weight:800}
+button{border:0;border-radius:12px;padding:13px 18px;font-weight:800;cursor:pointer;font-size:15px}
+.primary{background:#facc15;color:#171717;width:100%;font-size:18px}
+.secondary{background:#34415c;color:white;flex:1}
+.buttons{display:flex;gap:10px;margin-top:12px}
+.progress{height:10px;background:#303c56;border-radius:10px;overflow:hidden;margin:14px 0}
+#bar{height:100%;width:0;background:#facc15;transition:width .3s}
+#collection{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px}
+.bike{background:#171f33;border:1px solid #303c56;border-radius:14px;padding:14px;min-width:0}
+.bike .emoji{font-size:30px}
+.bike .name{font-weight:800;margin:6px 0}
+.muted{color:#aab6cc;font-size:13px}
+.rarity{font-size:12px;font-weight:800}
+.Common{color:#aab6cc}.Uncommon{color:#4ade80}.Rare{color:#60a5fa}
+.Epic{color:#c084fc}.Legendary{color:#facc15}
+.Mythic{color:#fb7185}.Secret{color:#22d3ee}
+.Divine{color:#f59e0b}.INFINITY{color:#ff5be9}
+footer{text-align:center;color:#aab6cc;font-size:12px;padding:20px}
+</style>
+</head>
+<body>
+<main>
+<header>
+<h1>🚲 BIKE RNG 2.0</h1>
+<p>Roll bikes. Unlock rarities. Complete your collection!</p>
+</header>
+<section class="panel">
+<div class="stats">
+<div>🎲 Total Rolls<strong id="rolls">0</strong></div>
+<div>🏆 Collected<strong id="count">0/20</strong></div>
+</div>
+<div class="progress"><div id="bar"></div></div>
+<div id="result">
+<div id="bikeEmoji">🚲</div>
+<div id="bikeName">Ready to roll?</div>
+<div id="bikeRarity" class="muted">Your next bike awaits!</div>
+</div>
+<button class="primary" id="roll">✨ ROLL BIKE!</button>
+<div class="buttons">
+<button class="secondary" id="roll10">ROLL 10x</button>
+<button class="secondary" id="reset">RESET</button>
+</div>
+</section>
+<h2>🏆 Bike Collection</h2>
+<p class="muted">Locked bikes are hidden. Collect all 20!</p>
+<section id="collection"></section>
+<footer>Bike RNG 2.0 · Keep rolling!</footer>
+</main>
+<script>
+const bikes=[
+["BMX","Common","🚲",25],
+["Mountain Bike","Common","🚵",20],
+["Road Bike","Uncommon","🚴",14],
+["BMX Pro","Uncommon","🚲",10],
+["Dirt Jumper","Rare","🚵",8],
+["Downhill Bike","Rare","🚵",6],
+["Carbon Racer","Epic","🚴",4],
+["Neon BMX","Epic","🚲",3],
+["Golden Bike","Legendary","🏆",2],
+["Phantom Bike","Mythic","👻",1],
+["Flame Bike","Legendary","🔥",2],
+["Ice Bike","Legendary","❄️",1.5],
+["Toxic Bike","Mythic","☢️",1],
+["Galaxy Bike","Mythic","🌌",0.8],
+["Lightning Bike","Mythic","⚡",0.6],
+["Diamond Bike","Secret","💎",0.4],
+["Void Bike","Secret","🌑",0.3],
+["Rainbow Bike","Secret","🌈",0.2],
+["God Bike","Divine","👑",0.1],
+["INFINITY BIKE","INFINITY","♾️",0.1]
+];
+const total=bikes.reduce((s,b)=>s+b[3],0);
+let saved={};
+try{saved=JSON.parse(localStorage.getItem("bikeRNGSave"))||{};}catch(e){saved={};}
+let owned=new Set(saved.owned||[]);
+let rolls=Number(saved.rolls)||0;
+let last=null;
+
+function save(){
+try{localStorage.setItem("bikeRNGSave",JSON.stringify({
+owned:[...owned],rolls
+}));}catch(e){}
+}
+function update(){
+document.getElementById("rolls").textContent=rolls;
+document.getElementById("count").textContent=owned.size+"/20";
+document.getElementById("bar").style.width=(owned.size/20*100)+"%";
+const list=document.getElementById("collection");
+list.innerHTML="";
+bikes.forEach(b=>{
+const unlocked=owned.has(b[0]);
+const card=document.createElement("article");
+card.className="bike";
+const emoji=document.createElement("div");
+emoji.className="emoji";
+emoji.textContent=unlocked?b[2]:"❔";
+const name=document.createElement("div");
+name.className="name";
+name.textContent=unlocked?b[0]:"???";
+const rarity=document.createElement("div");
+rarity.className="rarity "+b[1];
+rarity.textContent=b[1];
+const chance=document.createElement("div");
+chance.className="muted";
+chance.textContent=(b[3]/total*100).toFixed(1)+"% chance";
+card.append(emoji,name,rarity,chance);
+list.appendChild(card);
+});
+}
+function roll(){
+let r=Math.random()*total;
+let bike=bikes[bikes.length-1];
+for(const b of bikes){r-=b[3];if(r<0){bike=b;break;}}
+last=bike;
+const fresh=!owned.has(bike[0]);
+owned.add(bike[0]);rolls++;
+document.getElementById("bikeEmoji").textContent=bike[2];
+document.getElementById("bikeName").textContent=bike[0];
+const rarity=document.getElementById("bikeRarity");
+rarity.className="rarity "+bike[1];
+rarity.textContent=bike[1]+" · "+(bike[3]/total*100).toFixed(2)+"% chance"+(fresh?" · NEW UNLOCK!":" · Already collected");
+save();update();
+}
+document.getElementById("roll").addEventListener("click",roll);
+document.getElementById("roll10").addEventListener("click",()=>{
+for(let i=0;i<10;i++)roll();
+});
+document.getElementById("reset").addEventListener("click",()=>{
+if(confirm("Reset all bikes and roll history?")){
+owned.clear();rolls=0;last=null;save();update();
+document.getElementById("bikeEmoji").textContent="🚲";
+document.getElementById("bikeName").textContent="Ready to roll?";
+const r=document.getElementById("bikeRarity");
+r.className="muted";r.textContent="Your next bike awaits!";
+}
+});
+update();
+</script>
+</body>
+</html>
